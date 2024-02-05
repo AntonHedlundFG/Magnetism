@@ -3,6 +3,7 @@
 
 #include "MagnetismPhysicsSystem.h"
 #include "MagnetSphere.h"
+#include "MagnetismBoxDisplay.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 void UMagnetismPhysicsSystem::Tick(float DeltaTime)
@@ -11,7 +12,12 @@ void UMagnetismPhysicsSystem::Tick(float DeltaTime)
 	UpdateVelocitiesAndLocations(DeltaTime);
 	CheckAllMagnetToMagnetCollisions();
 	RestrainMagnetsWithinBoundsBox();
-	DrawBoundsBoxDebug();
+
+	if (IsValid(BoxDisplay))
+		BoxDisplay->SetActorScale3D(FVector::One() * (BoundsBoxSize / 50));
+	else
+		DrawBoundsBoxDebug();
+
 }
 
 void UMagnetismPhysicsSystem::ApplyAllMagneticForces(float DeltaTime) const

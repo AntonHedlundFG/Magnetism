@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
-//#include "Tickable.h"
 #include "MagnetismPhysicsSystem.generated.h"
 
 #define MAGNETISM_CONSTANT 100000.0f
@@ -12,6 +11,7 @@
 #define MAX_VELOCITY 1000.0f
 
 class AMagnetSphere;
+
 
 /**
  * 
@@ -34,6 +34,8 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = Magnetism)
 	FVector RandomSpawnLocation(const float Radius);
+
+	class AMagnetismBoxDisplay* BoxDisplay;
 
 protected:
 	virtual void Tick(float DeltaTime) override;
