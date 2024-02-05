@@ -9,6 +9,7 @@
 
 #define MAGNETISM_CONSTANT 100000.0f
 #define DRAG_MULTIPLIER 0.99f
+#define MAX_VELOCITY 1000.0f
 
 class AMagnetSphere;
 
@@ -26,13 +27,13 @@ public:
 	TArray<AMagnetSphere*> RegisteredMagnets;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Magnetism)
-	FVector LowerBounds = FVector::One() * -1000;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Magnetism)
-	FVector UpperBounds = FVector::One() * 1000;
+	float BoundsBoxSize = 300.0f;
 
 	UFUNCTION(BlueprintPure, Category = Magnetism)
 	AMagnetSphere* TraceLineForMagnetSpheres(const FVector& RayOrigin, const FVector& RayDirection);
+
+	UFUNCTION(BlueprintPure, Category = Magnetism)
+	FVector RandomSpawnLocation(const float Radius);
 
 protected:
 	virtual void Tick(float DeltaTime) override;
@@ -46,6 +47,8 @@ protected:
 
 	void CheckAllSphericalCollisions() const;
 	void HandleSphericalCollision(AMagnetSphere* MagnetA, AMagnetSphere* MagnetB) const;
+
+	void CheckBoundsCollisions() const;
 
 	void DrawDebugBounds() const;
 };

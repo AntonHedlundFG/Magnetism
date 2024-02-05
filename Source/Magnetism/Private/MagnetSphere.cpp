@@ -39,6 +39,13 @@ void AMagnetSphere::ApplyForce(FVector IncomingForce)
 	Velocity += IncomingForce / Mass;
 }
 
+void AMagnetSphere::RandomizeValues()
+{
+	Mass = FMath::RandRange(1.0f, 5.0f);
+	MagnetStrength = FMath::RandRange(1.0f, 10.0f);
+	SetPositive(FMath::RandBool());
+}
+
 // Called when the game starts or when spawned
 void AMagnetSphere::BeginPlay()
 {
@@ -48,6 +55,9 @@ void AMagnetSphere::BeginPlay()
 	// Spheres are only allowed to be uniformly scaled on each axis.
 	const float XScale = GetActorRelativeScale3D().X;
 	SetActorRelativeScale3D(FVector::One() * XScale);
+
+	RandomizeValues();
+
 
 	auto* const MagnetSystem = GetGameInstance()->GetSubsystem<UMagnetismPhysicsSystem>();
 	if (IsValid(MagnetSystem))

@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "MagnetSphere.generated.h"
 
+
 UCLASS( hidecategories=(Input, Movement, Collision, Rendering, HLOD, WorldPartition, DataLayers, Replication, Physics, Networking, Actor, LevelInstance, Cooking))
 class MAGNETISM_API AMagnetSphere : public AActor
 {
@@ -18,11 +19,11 @@ public:
 	UPROPERTY(Transient, VisibleAnywhere, BlueprintReadOnly, Category = Magnetism)
 	FVector Velocity;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Magnetism, meta = (ClampMin = 0.1f, ClampMax = 10.0f))
-	float Mass = 1.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Magnetism, meta = (ClampMin = 1.0f, ClampMax = 5.0f))
+	float Mass = 2.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Magnetism, meta = (ClampMin = 0.0f, ClampMax = 10.0f))
-	float MagnetStrength = 1.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Magnetism, meta = (ClampMin = 1.0f, ClampMax = 10.0f))
+	float MagnetStrength = 3.0f;
 
 	UFUNCTION(BlueprintCallable, Category = Magnetism)
 	void SetPositive(bool bIsPositive);
@@ -32,6 +33,9 @@ public:
 	
 	float GetSphereRadius() const;
 	void ApplyForce(FVector IncomingForce);
+
+	UFUNCTION(BlueprintCallable, Category = Magnetism)
+	void RandomizeValues();
 
 protected:
 	// Called when the game starts or when spawned

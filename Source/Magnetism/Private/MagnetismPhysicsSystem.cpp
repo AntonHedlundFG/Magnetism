@@ -10,6 +10,7 @@ void UMagnetismPhysicsSystem::Tick(float DeltaTime)
 	ApplyAllMagneticForces(DeltaTime);
 	UpdateAllLocations(DeltaTime);
 	CheckAllSphericalCollisions();
+	CheckBoundsCollisions();
 	DrawDebugBounds();
 }
 
@@ -46,8 +47,20 @@ void UMagnetismPhysicsSystem::UpdateAllLocations(float DeltaTime) const
 {
 	for (auto* Magnet : RegisteredMagnets)
 	{
-		Magnet->SetActorLocation(Magnet->GetActorLocation() + Magnet->Velocity * DeltaTime);
-		Magnet->Velocity *= DRAG_MULTIPLIER;
+		if (Magnet->Velocity.SquaredLength() < 0.01f)
+		{
+			Magnet->Velocity = FVector::Zero();
+		} 
+		else
+		{
+			if (Magnet->Velocity.SquaredLength() > MAX_VELOCITY * MAX_VELOCITY)
+			{
+				Magnet->Velocity = Magnet->Velocity.GetSafeNormal() * MAX_VELOCITY;
+			}
+
+			Magnet->SetActorLocation(Magnet->GetActorLocation() + Magnet->Velocity * DeltaTime);
+			Magnet->Velocity *= DRAG_MULTIPLIER;
+		}
 	}
 }
 
@@ -70,20 +83,27 @@ void UMagnetismPhysicsSystem::HandleSphericalCollision(AMagnetSphere* MagnetA, A
 		return;
 	}
 
+	//Check if the two objects are actually overlapping.
 	const float Distance = FVector::Distance(MagnetA->GetActorLocation(), MagnetB->GetActorLocation());
 	const float OverlappedDistance = MagnetA->GetSphereRadius() + MagnetB->GetSphereRadius() - Distance;
 	if (OverlappedDistance <= 0.0f)
 		return;
 
+	//This is the direction of impact between the two spheres
 	const FVector Normal = (MagnetB->GetActorLocation() - MagnetA->GetActorLocation()).GetSafeNormal();
 
-	const FVector RelativeVelocity = MagnetB->Velocity - MagnetA->Velocity;
-	const float RelevantSpeed = FMath::Abs(FVector::DotProduct(RelativeVelocity, Normal));
+	//The force applied by each magnet is relative to its mass, and its velocity, but only 
+	//the part of its velocity that is parallell to the normal direction. 
+	const float RelativeSpeedA = FMath::Abs(FVector::DotProduct(MagnetA->Velocity, Normal));
+	const float RelativeSpeedB = FMath::Abs(FVector::DotProduct(MagnetB->Velocity, Normal));
+	const float TotalForce = RelativeSpeedA * MagnetA->Mass + RelativeSpeedB * MagnetB->Mass;
+	
+	//The same force is applied to each magnet, regardless of mass; to keep Newton happy.
+	MagnetA->ApplyForce(-Normal * TotalForce * DRAG_MULTIPLIER);
+	MagnetB->ApplyForce(Normal * TotalForce * DRAG_MULTIPLIER);
 
-	const float TotalForce = RelevantSpeed * (MagnetA->Mass + MagnetB->Mass) * 0.5f;
-	MagnetA->ApplyForce(-Normal * TotalForce);
-	MagnetB->ApplyForce(Normal * TotalForce);
-
+	//Finally, we have to counteract the actual overlapping, so we move the two actors apart a bit.
+	//The heavier object is moved less.
 	const float MassPercentageA = MagnetA->Mass / (MagnetA->Mass + MagnetB->Mass);
 	MagnetA->SetActorLocation(
 		MagnetA->GetActorLocation() -
@@ -95,17 +115,61 @@ void UMagnetismPhysicsSystem::HandleSphericalCollision(AMagnetSphere* MagnetA, A
 	);
 }
 
+void UMagnetismPhysicsSystem::CheckBoundsCollisions() const
+{
+	for (auto* Magnet : RegisteredMagnets)
+	{
+		FVector Location = Magnet->GetActorLocation();
+		const float Radius = Magnet->GetSphereRadius();
+
+		if (Location.X - Radius < -BoundsBoxSize)
+		{
+			Location.X = -BoundsBoxSize + Radius;
+			Magnet->Velocity.X *= -1;
+		}
+		else if (Location.X + Radius > BoundsBoxSize)
+		{
+			Location.X = BoundsBoxSize - Radius;
+			Magnet->Velocity.X *= -1;
+		}
+
+		if (Location.Y - Radius < -BoundsBoxSize)
+		{
+			Location.Y = -BoundsBoxSize + Radius;
+			Magnet->Velocity.Y *= -1;
+		}
+		else if (Location.Y + Radius > BoundsBoxSize)
+		{
+			Location.Y = BoundsBoxSize - Radius;
+			Magnet->Velocity.Y *= -1;
+		}
+
+		if (Location.Z - Radius < -BoundsBoxSize)
+		{
+			Location.Z = -BoundsBoxSize + Radius;
+			Magnet->Velocity.Z *= -1;
+		}
+		else if (Location.Z + Radius > BoundsBoxSize)
+		{
+			Location.Z = BoundsBoxSize - Radius;
+			Magnet->Velocity.Z *= -1;
+		}
+
+		Magnet->SetActorLocation(Location);
+	}
+}
+
 void UMagnetismPhysicsSystem::DrawDebugBounds() const
 {
-	if (RegisteredMagnets.Num() == 0 || IsValid(RegisteredMagnets[0])) return;
+	if (RegisteredMagnets.Num() == 0 || !IsValid(RegisteredMagnets[0])) return;
 	UKismetSystemLibrary::DrawDebugBox(
 		RegisteredMagnets[0],
-		(UpperBounds + LowerBounds) / 2,
-		(UpperBounds - LowerBounds) / 2,
+		FVector::Zero(),
+		FVector::One() * BoundsBoxSize,
 		FLinearColor::Red,
 		FRotator::ZeroRotator,
 		0.0f,
-		50.0f
+		10.0f
 		);
 }
 
@@ -149,4 +213,13 @@ AMagnetSphere* UMagnetismPhysicsSystem::TraceLineForMagnetSpheres(const FVector&
 	}
 
 	return ReturnPtr;
+}
+
+FVector UMagnetismPhysicsSystem::RandomSpawnLocation(const float Radius)
+{
+	FBox Box = FBox(
+		-FVector::One() * (BoundsBoxSize - Radius),
+		FVector::One() * (BoundsBoxSize - Radius)
+	);
+	return FMath::RandPointInBox(Box);
 }
