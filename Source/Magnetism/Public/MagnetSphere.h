@@ -54,4 +54,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Magnetism, meta = (DisplayName="Is Positive"))
 	bool bIsPositiveSaved = true;
 
+	UPROPERTY(Transient)
+	float TargetScale;
+
 };

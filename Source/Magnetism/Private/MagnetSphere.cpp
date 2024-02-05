@@ -44,10 +44,14 @@ void AMagnetSphere::BeginPlay()
 	Super::BeginPlay();
 
 	// Spheres are only allowed to be uniformly scaled on each axis.
-	const float XScale = GetActorRelativeScale3D().X;
-	SetActorRelativeScale3D(FVector::One() * XScale);
+	TargetScale = GetActorRelativeScale3D().X;
+
+	// Set small scale, will grow towards target scale in Tick
+	SetActorRelativeScale3D(FVector::One() * TargetScale * 0.01f);
 
 	RandomizeValues();
+
+	
 
 	//Register magnet in physics system
 	auto* const MagnetSystem = GetGameInstance()->GetSubsystem<UMagnetismPhysicsSystem>();
@@ -72,5 +76,14 @@ void AMagnetSphere::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void AMagnetSphere::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	float CurrentScale = GetActorRelativeScale3D().X;
+	if (CurrentScale < TargetScale)
+	{
+		CurrentScale += DeltaTime * 4.0f;
+		if (CurrentScale > TargetScale)
+			CurrentScale = TargetScale;
+		SetActorRelativeScale3D(FVector::One() * CurrentScale);
+	}
 }
 
