@@ -8,10 +8,10 @@
 void UMagnetismPhysicsSystem::Tick(float DeltaTime)
 {
 	ApplyAllMagneticForces(DeltaTime);
-	UpdateAllLocations(DeltaTime);
-	CheckAllSphericalCollisions();
-	CheckBoundsCollisions();
-	DrawDebugBounds();
+	UpdateVelocitiesAndLocations(DeltaTime);
+	CheckAllMagnetToMagnetCollisions();
+	RestrainMagnetsWithinBoundsBox();
+	DrawBoundsBoxDebug();
 }
 
 void UMagnetismPhysicsSystem::ApplyAllMagneticForces(float DeltaTime) const
@@ -27,55 +27,62 @@ void UMagnetismPhysicsSystem::ApplyAllMagneticForces(float DeltaTime) const
 
 void UMagnetismPhysicsSystem::ApplyMagneticForce(AMagnetSphere* MagnetA, AMagnetSphere* MagnetB, float DeltaTime) const
 {
-	float Distance = FVector::Distance(MagnetA->GetActorLocation(), MagnetB->GetActorLocation());
-	float Force = MAGNETISM_CONSTANT * 
+	const float Distance = FVector::Distance(MagnetA->GetActorLocation(), MagnetB->GetActorLocation());
+	
+	// Force calculation is similar to gravity; but multiplying each object's mass by it's magnetic strength.
+	const float Force = MAGNETISM_CONSTANT * 
 		MagnetA->Mass * MagnetA->MagnetStrength * 
 		MagnetB->Mass * MagnetB->MagnetStrength / 
 		(Distance * Distance);
 
-	FVector AToBNormalized = (MagnetB->GetActorLocation() - MagnetA->GetActorLocation()).GetSafeNormal();
-	FVector ForceOnA =
+	//Calculate the force, direction inverts if magnets attract each other
+	const FVector AToBNormalized = (MagnetB->GetActorLocation() - MagnetA->GetActorLocation()).GetSafeNormal();
+	const FVector ForceOnA =
 		(MagnetA->IsPositive() != MagnetB->IsPositive()) ?
-		AToBNormalized * Force :
-		AToBNormalized * Force * -1;
+		AToBNormalized * Force * DeltaTime:
+		AToBNormalized * Force * DeltaTime * -1;
 
-	MagnetA->ApplyForce(ForceOnA * DeltaTime);
-	MagnetB->ApplyForce(-ForceOnA * DeltaTime);
+	//Apply the same force to the objects, but in opposite directions.
+	MagnetA->ApplyForce(ForceOnA);
+	MagnetB->ApplyForce(-ForceOnA);
 }
 
-void UMagnetismPhysicsSystem::UpdateAllLocations(float DeltaTime) const
+void UMagnetismPhysicsSystem::UpdateVelocitiesAndLocations(float DeltaTime) const
 {
 	for (auto* Magnet : RegisteredMagnets)
 	{
 		if (Magnet->Velocity.SquaredLength() < 0.01f)
 		{
+			//For very small velocities, still the object.
 			Magnet->Velocity = FVector::Zero();
 		} 
 		else
 		{
+			//Restricting maximum velocities to avoid glitchy behaviour in extreme scenarios.
 			if (Magnet->Velocity.SquaredLength() > MAX_VELOCITY * MAX_VELOCITY)
 			{
 				Magnet->Velocity = Magnet->Velocity.GetSafeNormal() * MAX_VELOCITY;
 			}
 
+			//Update location and velocity.
 			Magnet->SetActorLocation(Magnet->GetActorLocation() + Magnet->Velocity * DeltaTime);
 			Magnet->Velocity *= DRAG_MULTIPLIER;
 		}
 	}
 }
 
-void UMagnetismPhysicsSystem::CheckAllSphericalCollisions() const
+void UMagnetismPhysicsSystem::CheckAllMagnetToMagnetCollisions() const
 {
 	for (int i = 0; i < RegisteredMagnets.Num(); i++)
 	{
 		for (int j = i + 1; j < RegisteredMagnets.Num(); j++)
 		{
-			HandleSphericalCollision(RegisteredMagnets[i], RegisteredMagnets[j]);
+			HandleMagnetToMagnetCollision(RegisteredMagnets[i], RegisteredMagnets[j]);
 		}
 	}
 }
 
-void UMagnetismPhysicsSystem::HandleSphericalCollision(AMagnetSphere* MagnetA, AMagnetSphere* MagnetB) const
+void UMagnetismPhysicsSystem::HandleMagnetToMagnetCollision(AMagnetSphere* MagnetA, AMagnetSphere* MagnetB) const
 {
 	if (MagnetA == MagnetB)
 	{
@@ -115,53 +122,58 @@ void UMagnetismPhysicsSystem::HandleSphericalCollision(AMagnetSphere* MagnetA, A
 	);
 }
 
-void UMagnetismPhysicsSystem::CheckBoundsCollisions() const
+void UMagnetismPhysicsSystem::RestrainMagnetsWithinBoundsBox() const
 {
 	for (auto* Magnet : RegisteredMagnets)
 	{
 		FVector Location = Magnet->GetActorLocation();
 		const float Radius = Magnet->GetSphereRadius();
 
+		//We restrain the magnet's position so that it does not extend outside the bounding box. 
+		//If the magnet is outside in one axis, move it inside and flip its velocity in that axis, applying drag.
 		if (Location.X - Radius < -BoundsBoxSize)
 		{
 			Location.X = -BoundsBoxSize + Radius;
-			Magnet->Velocity.X *= -1;
+			Magnet->Velocity.X *= -DRAG_MULTIPLIER;
 		}
 		else if (Location.X + Radius > BoundsBoxSize)
 		{
 			Location.X = BoundsBoxSize - Radius;
-			Magnet->Velocity.X *= -1;
+			Magnet->Velocity.X *= -DRAG_MULTIPLIER;
 		}
 
 		if (Location.Y - Radius < -BoundsBoxSize)
 		{
 			Location.Y = -BoundsBoxSize + Radius;
-			Magnet->Velocity.Y *= -1;
+			Magnet->Velocity.Y *= -DRAG_MULTIPLIER;
 		}
 		else if (Location.Y + Radius > BoundsBoxSize)
 		{
 			Location.Y = BoundsBoxSize - Radius;
-			Magnet->Velocity.Y *= -1;
+			Magnet->Velocity.Y *= -DRAG_MULTIPLIER;
 		}
 
 		if (Location.Z - Radius < -BoundsBoxSize)
 		{
 			Location.Z = -BoundsBoxSize + Radius;
-			Magnet->Velocity.Z *= -1;
+			Magnet->Velocity.Z *= -DRAG_MULTIPLIER;
 		}
 		else if (Location.Z + Radius > BoundsBoxSize)
 		{
 			Location.Z = BoundsBoxSize - Radius;
-			Magnet->Velocity.Z *= -1;
+			Magnet->Velocity.Z *= -DRAG_MULTIPLIER;
 		}
 
+		//Update magnet with corrected location
 		Magnet->SetActorLocation(Location);
 	}
 }
 
-void UMagnetismPhysicsSystem::DrawDebugBounds() const
+void UMagnetismPhysicsSystem::DrawBoundsBoxDebug() const
 {
+	//Cannot draw debug box without world context object. Using first magnet as context.
 	if (RegisteredMagnets.Num() == 0 || !IsValid(RegisteredMagnets[0])) return;
+
 	UKismetSystemLibrary::DrawDebugBox(
 		RegisteredMagnets[0],
 		FVector::Zero(),
@@ -186,12 +198,15 @@ AMagnetSphere* UMagnetismPhysicsSystem::TraceLineForMagnetSpheres(const FVector&
 		if (RayOriginToSphereCenter.SquaredLength() < Magnet->GetSphereRadius())
 			continue;
 
+		//Distance from the ray's origin point, to an imagined point along it's direction which is closest to the sphere's center.
 		const float ClosestPointOnRayDistance = RayOriginToSphereCenter.Dot(RayDirection);
 
 		//Ray points away from sphere
 		if (ClosestPointOnRayDistance < 0.0f && RayOriginToSphereCenter.Length() > Magnet->GetSphereRadius())
 			continue;
 
+		//The same imagined point as in the ClosestPointOnRayDistance, but instead it's distance to the sphere's center
+		//using the pythagorean theorem.
 		const float ClosestPointOnSphereDistance = FMath::Sqrt(
 			RayOriginToSphereCenter.SquaredLength() - ClosestPointOnRayDistance * ClosestPointOnRayDistance
 		);
@@ -200,14 +215,18 @@ AMagnetSphere* UMagnetismPhysicsSystem::TraceLineForMagnetSpheres(const FVector&
 		if (ClosestPointOnSphereDistance > Magnet->GetSphereRadius())
 			continue;
 
+		//Uses pythagorean theorem to find the distance from the imagined closest point to the intersection point,
+		//which, when subtracted from the distance from the ray's origin and the imagined closest point,
+		//gives the distance from the ray's origin to the intersection point.
 		const float IntersectionDistance = ClosestPointOnRayDistance - FMath::Sqrt(
 			Magnet->GetSphereRadius() * Magnet->GetSphereRadius() - ClosestPointOnSphereDistance * ClosestPointOnSphereDistance
 		);
 
-		//There is a closer intersected object
+		//There is a closer intersected object already found
 		if (IntersectionDistance >= ClosestHitDistance)
 			continue;
 
+		//We've found an intersection, and it's the closest one yet. Update results.
 		ReturnPtr = Magnet;
 		ClosestHitDistance = IntersectionDistance;
 	}
@@ -217,6 +236,8 @@ AMagnetSphere* UMagnetismPhysicsSystem::TraceLineForMagnetSpheres(const FVector&
 
 FVector UMagnetismPhysicsSystem::RandomSpawnLocation(const float Radius)
 {
+	//Pick a random point within the box defined by BoundsBoxSize, but not close enough to the edge that the sphere
+	//would touch the outside.
 	FBox Box = FBox(
 		-FVector::One() * (BoundsBoxSize - Radius),
 		FVector::One() * (BoundsBoxSize - Radius)

@@ -19,6 +19,7 @@ AMagnetSphere::AMagnetSphere()
 
 void AMagnetSphere::SetPositive(bool bIsPositive)
 {
+	//Update materials if possible
 	if (bIsPositive && IsValid(PositiveMaterial))
 	{
 		MeshComp->SetMaterial(0, PositiveMaterial);
@@ -26,17 +27,9 @@ void AMagnetSphere::SetPositive(bool bIsPositive)
 	{
 		MeshComp->SetMaterial(0, NegativeMaterial);
 	}
-	bIsPositiveCached = bIsPositive;
-}
 
-float AMagnetSphere::GetSphereRadius() const
-{
-	return GetActorRelativeScale3D().X * 50.0f;
-}
-
-void AMagnetSphere::ApplyForce(FVector IncomingForce)
-{
-	Velocity += IncomingForce / Mass;
+	//save value
+	bIsPositiveSaved = bIsPositive;
 }
 
 void AMagnetSphere::RandomizeValues()
@@ -46,11 +39,9 @@ void AMagnetSphere::RandomizeValues()
 	SetPositive(FMath::RandBool());
 }
 
-// Called when the game starts or when spawned
 void AMagnetSphere::BeginPlay()
 {
 	Super::BeginPlay();
-	SetPositive(bIsPositiveCached);
 
 	// Spheres are only allowed to be uniformly scaled on each axis.
 	const float XScale = GetActorRelativeScale3D().X;
@@ -58,7 +49,7 @@ void AMagnetSphere::BeginPlay()
 
 	RandomizeValues();
 
-
+	//Register magnet in physics system
 	auto* const MagnetSystem = GetGameInstance()->GetSubsystem<UMagnetismPhysicsSystem>();
 	if (IsValid(MagnetSystem))
 	{

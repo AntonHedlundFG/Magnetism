@@ -13,8 +13,8 @@ class MAGNETISM_API AMagnetSphere : public AActor
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
 	AMagnetSphere();
+	virtual void Tick(float DeltaTime) override;
 
 	UPROPERTY(Transient, VisibleAnywhere, BlueprintReadOnly, Category = Magnetism)
 	FVector Velocity;
@@ -29,16 +29,16 @@ public:
 	void SetPositive(bool bIsPositive);
 
 	UFUNCTION(BlueprintPure, Category = Magnetism)
-	bool IsPositive() { return bIsPositiveCached; }
+	bool IsPositive() { return bIsPositiveSaved; }
 	
-	float GetSphereRadius() const;
-	void ApplyForce(FVector IncomingForce);
-
+	// Randomizes values of Mass, MagnetStrength and IsPositive
 	UFUNCTION(BlueprintCallable, Category = Magnetism)
 	void RandomizeValues();
 
+	void ApplyForce(FVector IncomingForce) { Velocity += IncomingForce / Mass; }
+	float GetSphereRadius() const { return GetActorRelativeScale3D().X * 50.0f; }
+
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
@@ -52,10 +52,6 @@ protected:
 	TObjectPtr<class UMaterial> NegativeMaterial;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Magnetism, meta = (DisplayName="Is Positive"))
-	bool bIsPositiveCached = true;
-
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	bool bIsPositiveSaved = true;
 
 };

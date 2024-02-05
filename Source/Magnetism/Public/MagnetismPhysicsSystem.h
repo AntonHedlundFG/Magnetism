@@ -27,7 +27,7 @@ public:
 	TArray<AMagnetSphere*> RegisteredMagnets;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Magnetism)
-	float BoundsBoxSize = 300.0f;
+	float BoundsBoxSize = 600.0f;
 
 	UFUNCTION(BlueprintPure, Category = Magnetism)
 	AMagnetSphere* TraceLineForMagnetSpheres(const FVector& RayOrigin, const FVector& RayDirection);
@@ -43,12 +43,12 @@ protected:
 	void ApplyAllMagneticForces(float DeltaTime) const;
 	void ApplyMagneticForce(AMagnetSphere* MagnetA, AMagnetSphere* MagnetB, float DeltaTime) const;
 
-	void UpdateAllLocations(float DeltaTime) const;
+	void UpdateVelocitiesAndLocations(float DeltaTime) const;
 
-	void CheckAllSphericalCollisions() const;
-	void HandleSphericalCollision(AMagnetSphere* MagnetA, AMagnetSphere* MagnetB) const;
+	void CheckAllMagnetToMagnetCollisions() const;
+	void HandleMagnetToMagnetCollision(AMagnetSphere* MagnetA, AMagnetSphere* MagnetB) const;
 
-	void CheckBoundsCollisions() const;
+	void RestrainMagnetsWithinBoundsBox() const;
 
-	void DrawDebugBounds() const;
+	void DrawBoundsBoxDebug() const;
 };
