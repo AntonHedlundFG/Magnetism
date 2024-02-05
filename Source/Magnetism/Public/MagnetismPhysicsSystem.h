@@ -53,4 +53,5 @@ protected:
 	void RestrainMagnetsWithinBoundsBox() const;
 
 	void DrawBoundsBoxDebug() const;
+	
 };

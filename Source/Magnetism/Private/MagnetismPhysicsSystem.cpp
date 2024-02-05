@@ -22,13 +22,12 @@ void UMagnetismPhysicsSystem::Tick(float DeltaTime)
 
 void UMagnetismPhysicsSystem::ApplyAllMagneticForces(float DeltaTime) const
 {
-	for (int i = 0; i < RegisteredMagnets.Num(); i++)
-	{
+	ParallelFor(RegisteredMagnets.Num(), [&](int32 i) {
 		for (int j = i + 1; j < RegisteredMagnets.Num(); j++)
 		{
 			ApplyMagneticForce(RegisteredMagnets[i], RegisteredMagnets[j], DeltaTime);
 		}
-	}
+		});
 }
 
 void UMagnetismPhysicsSystem::ApplyMagneticForce(AMagnetSphere* MagnetA, AMagnetSphere* MagnetB, float DeltaTime) const
@@ -79,13 +78,12 @@ void UMagnetismPhysicsSystem::UpdateVelocitiesAndLocations(float DeltaTime) cons
 
 void UMagnetismPhysicsSystem::CheckAllMagnetToMagnetCollisions() const
 {
-	for (int i = 0; i < RegisteredMagnets.Num(); i++)
-	{
+	ParallelFor(RegisteredMagnets.Num(), [&](int32 i) {
 		for (int j = i + 1; j < RegisteredMagnets.Num(); j++)
 		{
 			HandleMagnetToMagnetCollision(RegisteredMagnets[i], RegisteredMagnets[j]);
 		}
-	}
+		});
 }
 
 void UMagnetismPhysicsSystem::HandleMagnetToMagnetCollision(AMagnetSphere* MagnetA, AMagnetSphere* MagnetB) const
@@ -130,8 +128,8 @@ void UMagnetismPhysicsSystem::HandleMagnetToMagnetCollision(AMagnetSphere* Magne
 
 void UMagnetismPhysicsSystem::RestrainMagnetsWithinBoundsBox() const
 {
-	for (auto* Magnet : RegisteredMagnets)
-	{
+	ParallelFor(RegisteredMagnets.Num(), [&](int32 i) {
+		auto* Magnet = RegisteredMagnets[i];
 		FVector Location = Magnet->GetActorLocation();
 		const float Radius = Magnet->GetSphereRadius();
 
@@ -172,7 +170,8 @@ void UMagnetismPhysicsSystem::RestrainMagnetsWithinBoundsBox() const
 
 		//Update magnet with corrected location
 		Magnet->SetActorLocation(Location);
-	}
+		});
+
 }
 
 void UMagnetismPhysicsSystem::DrawBoundsBoxDebug() const
