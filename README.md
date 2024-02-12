@@ -7,7 +7,7 @@ Considering monopolar magnets do not exist (?), a more appropriate name for the 
 
 ## Implementation
 All behaviour is simulated in [UMagnetismPhysicsSystem](/Source/Magnetism/Private/MagnetismPhysicsSystem.cpp). It is a UGameInstanceSubsystem, as well as a FTickableGameObject. Each tick it performs the following tasks in order:
-- Apply all magnetic foces between each pair of magnets, using an adaptation of Coulomb's Law.
+- Apply all magnetic forces between each pair of magnets, using an adaptation of Coulomb's Law.
 - Update the location of all magnets based on their velocities, and applies drag.
 - Check all magnet pairs for Magnet-To-Magnet collisions.
 - Check each magnet for collisions with the bounding box.
