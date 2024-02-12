@@ -44,8 +44,8 @@ void UMagnetismPhysicsSystem::ApplyMagneticForce(AMagnetSphere* MagnetA, AMagnet
 	const FVector AToBNormalized = (MagnetB->GetActorLocation() - MagnetA->GetActorLocation()).GetSafeNormal();
 	const FVector ForceOnA =
 		(MagnetA->IsPositive() != MagnetB->IsPositive()) ?
-		AToBNormalized * Force * DeltaTime:
-		AToBNormalized * Force * DeltaTime * -1;
+		AToBNormalized * Force * DeltaTime: //Attract
+		AToBNormalized * Force * DeltaTime * -1; //Repel
 
 	//Apply the same force to the objects, but in opposite directions.
 	MagnetA->ApplyForce(ForceOnA);
@@ -105,13 +105,13 @@ void UMagnetismPhysicsSystem::HandleMagnetToMagnetCollision(AMagnetSphere* Magne
 
 	//The force applied by each magnet is relative to its mass, and its velocity, but only 
 	//the part of its velocity that is parallell to the normal direction. 
-	const float RelativeSpeedA = FMath::Abs(FVector::DotProduct(MagnetA->Velocity, Normal));
-	const float RelativeSpeedB = FMath::Abs(FVector::DotProduct(MagnetB->Velocity, Normal));
+	const float RelativeSpeedA = FVector::DotProduct(MagnetA->Velocity, Normal);
+	const float RelativeSpeedB = FVector::DotProduct(MagnetB->Velocity, -Normal);
 	const float TotalForce = RelativeSpeedA * MagnetA->Mass + RelativeSpeedB * MagnetB->Mass;
 	
 	//The same force is applied to each magnet, regardless of mass; to keep Newton happy.
-	MagnetA->ApplyForce(-Normal * TotalForce * DRAG_MULTIPLIER);
-	MagnetB->ApplyForce(Normal * TotalForce * DRAG_MULTIPLIER);
+	MagnetA->ApplyForce(-Normal * TotalForce * COLLISION_ENERGY_CONSERVED);
+	MagnetB->ApplyForce(Normal * TotalForce * COLLISION_ENERGY_CONSERVED);
 
 	//Finally, we have to counteract the actual overlapping, so we move the two actors apart a bit.
 	//The heavier object is moved less.
@@ -138,34 +138,34 @@ void UMagnetismPhysicsSystem::RestrainMagnetsWithinBoundsBox() const
 		if (Location.X - Radius < -BoundsBoxSize)
 		{
 			Location.X = -BoundsBoxSize + Radius;
-			Magnet->Velocity.X *= -DRAG_MULTIPLIER;
+			Magnet->Velocity.X *= -COLLISION_ENERGY_CONSERVED;
 		}
 		else if (Location.X + Radius > BoundsBoxSize)
 		{
 			Location.X = BoundsBoxSize - Radius;
-			Magnet->Velocity.X *= -DRAG_MULTIPLIER;
+			Magnet->Velocity.X *= -COLLISION_ENERGY_CONSERVED;
 		}
 
 		if (Location.Y - Radius < -BoundsBoxSize)
 		{
 			Location.Y = -BoundsBoxSize + Radius;
-			Magnet->Velocity.Y *= -DRAG_MULTIPLIER;
+			Magnet->Velocity.Y *= -COLLISION_ENERGY_CONSERVED;
 		}
 		else if (Location.Y + Radius > BoundsBoxSize)
 		{
 			Location.Y = BoundsBoxSize - Radius;
-			Magnet->Velocity.Y *= -DRAG_MULTIPLIER;
+			Magnet->Velocity.Y *= -COLLISION_ENERGY_CONSERVED;
 		}
 
 		if (Location.Z - Radius < -BoundsBoxSize)
 		{
 			Location.Z = -BoundsBoxSize + Radius;
-			Magnet->Velocity.Z *= -DRAG_MULTIPLIER;
+			Magnet->Velocity.Z *= -COLLISION_ENERGY_CONSERVED;
 		}
 		else if (Location.Z + Radius > BoundsBoxSize)
 		{
 			Location.Z = BoundsBoxSize - Radius;
-			Magnet->Velocity.Z *= -DRAG_MULTIPLIER;
+			Magnet->Velocity.Z *= -COLLISION_ENERGY_CONSERVED;
 		}
 
 		//Update magnet with corrected location

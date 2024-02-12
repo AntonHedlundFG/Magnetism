@@ -10,6 +10,10 @@
 #define DRAG_MULTIPLIER 0.99f
 #define MAX_VELOCITY 1000.0f
 
+//Describes how much of the energy is conserved upon collision.
+//Avoids overly bouncy behaviour
+#define COLLISION_ENERGY_CONSERVED 0.7f 
+
 class AMagnetSphere;
 
 
